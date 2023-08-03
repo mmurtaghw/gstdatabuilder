@@ -66,25 +66,17 @@ def get_dbpedia_info(title):
 
     results = sparql.query().convert()
 
+    subject = f"<http://dbpedia.org/resource/{title.replace(' ', '_')}>"
     dbpedia_results = []
     for result in results["results"]["bindings"]:
-        predicate = result["predicate"]["value"]
-        obj = result["object"]["value"]
-        dbpedia_results.append(f"{predicate}: {obj}")
-    return ' '.join(dbpedia_results)
+        predicate = f"<{result['predicate']['value']}>"
+        if result['object']['type'] == 'uri':
+            obj = f"<{result['object']['value']}>"
+        else:
+            obj = f"\"{result['object']['value']}\""
+        dbpedia_results.append(f"{subject} {predicate} {obj} .")
+    return '\n'.join(dbpedia_results)
 
-
-def clean_text(text):
-    """Clean text of citation links and other undesirable characters or sequences"""
-    # remove citation links
-    text = re.sub(r'\[\d+\]', '', text)
-    # remove newline characters
-    text = text.replace('\n', ' ')
-    # remove double quotes
-    text = text.replace('"', '')
-    # replace comma with semicolon to prevent issues with csv
-    text = text.replace(',', ';')
-    return text.strip()
 
 def main():
     """Main function to run the script"""
