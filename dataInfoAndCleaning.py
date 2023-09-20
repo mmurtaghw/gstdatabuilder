@@ -1,8 +1,12 @@
 import pandas as pd
 
 csvPath = 'outputData/wikidata.csv'
+csvOutPath = 'outputData/wikidataFiltered.csv'
 
 df = pd.read_csv(csvPath)
+
+# Selecting only the last three columns
+df = df.iloc[:, -3:]
 
 # use .head(n) to get the first n rows
 print(df.head(30))
@@ -31,7 +35,7 @@ print(f'Total Duplicates Before Dropping: {df.duplicated().sum()}')
 # Dropping duplicates
 df = df.drop_duplicates()
 
-df.to_csv(csvPath)
+df.to_csv(csvOutPath)
 
 # Checking for duplicate entries after dropping duplicates
 print(f'Total Duplicates After Dropping: {df.duplicated().sum()}')

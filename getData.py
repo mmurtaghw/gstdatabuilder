@@ -8,6 +8,7 @@ import logging
 import pandas as pd
 from tqdm import tqdm
 import os
+import argparse
 
 def clean_text(text):
     """Clean text of citation links"""
@@ -68,23 +69,25 @@ def get_dbpedia_info(title):
 
     subject = f"<http://dbpedia.org/resource/{title.replace(' ', '_')}>"
     dbpedia_results = []
-    for result in results["results"]["bindings"]:
-        predicate = f"<{result['predicate']['value']}>"
-        if result['object']['type'] == 'uri':
-            obj = f"<{result['object']['value']}>"
-        else:
-            obj = f"\"{result['object']['value']}\""
-        dbpedia_results.append(f"{subject} {predicate} {obj} .")
+    try:
+        for result in results["results"]["bindings"]:
+            predicate = f"<{result['predicate']['value']}>"
+            if result['object']['type'] == 'uri':
+                obj = f"<{result['object']['value']}>"
+            else:
+                escaped_value = result['object']['value'].replace("\n", "\\n").replace("\r", "\\r").replace("\"", "\\\"")
+                obj = f"\"{escaped_value}\""
+            dbpedia_results.append(f"{subject} {predicate} {obj} .")
+    except Exception as e:
+        logging.error(f"Error occurred while processing triples: {str(e)}")
     return '\n'.join(dbpedia_results)
 
 
-def main():
+def main(csv_filename):
     """Main function to run the script"""
-    num_requests = 10000  # Number of requests to be made. Modify this as per your requirement.
+    num_requests = 100000  # Number of requests to be made. Modify this as per your requirement.
     wait_time = 0.5  # Wait time in seconds between requests.
     wait_period = 20
-
-    csv_filename = 'outputData/wikidata.csv'
 
     # Check if CSV file exists, if so initialize DataFrame with the same structure,
     # else initialize a new one
@@ -114,10 +117,12 @@ def main():
             dbpedia_triples = get_dbpedia_info(page_title)
             #dbpedia_triples = clean_text(get_dbpedia_info(page_title))
 
-            # Append the row to the DataFrame
-            data = data.append({"Title": page_title, 
-                                "PageContents": page_contents, 
-                                "dbpediaTriples": dbpedia_triples}, ignore_index=True)
+            new_row = pd.DataFrame({"Title": [page_title], 
+                                    "PageContents": [page_contents], 
+                                    "dbpediaTriples": [dbpedia_triples]})
+
+            data = pd.concat([data, new_row], ignore_index=True)
+
 
             # If csv file does not exist, write with header, else append without writing header
             if i == 0 and not os.path.isfile(csv_filename):
@@ -136,5 +141,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Wikipedia and DBpedia data scraper')
+    parser.add_argument('csv_path', type=str, help='Path to the output CSV file')
+    args = parser.parse_args()
+    main(args.csv_path)
 
